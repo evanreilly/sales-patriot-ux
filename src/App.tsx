@@ -4,16 +4,26 @@ import type { Vendor } from "./lib/types";
 import { buildThreadModel } from "./lib/evidence";
 import { formatDate, latestResponse } from "./lib/review";
 import { EmailPane } from "./components/EmailPane";
+import { ExtractedPane } from "./components/ExtractedPane";
 import { FollowUpPane } from "./components/FollowUpPane";
-import { followUpItems, initialFollowUp, type FollowUpState } from "./lib/followUp";
+import { followUpItems, type FollowUpState } from "./lib/followUp";
 import { IssueBar } from "./components/IssueBar";
 import { Icon } from "./components/Icon";
+import { ResizablePane } from "./components/ResizablePane";
+import { buildFieldLinks } from "./lib/fieldLinks";
 
 const vendors: Vendor[] = fixture.vendors;
+const emptyFollowUp = (): FollowUpState => ({
+  added: [],
+  included: [],
+  body: null,
+  draftedIds: [],
+});
 export interface Selection {
   productId: string;
   sourceId?: string;
   targetId?: string;
+  linkId?: string;
   origin: "source" | "field" | "guide";
   sequence: number;
 }
@@ -22,6 +32,7 @@ export default function App() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [middleView, setMiddleView] = useState<"review" | "follow-up">("review");
   const models = useMemo(
     () =>
       new Map(vendors.map((vendor) => [vendor.id, buildThreadModel(vendor)])),
@@ -31,6 +42,7 @@ export default function App() {
   const [drafts, setDrafts] = useState<Record<string, FollowUpState>>({});
   const vendor = vendors.find((item) => item.id === vendorId)!;
   const model = models.get(vendor.id)!;
+  const fieldLinks = useMemo(() => buildFieldLinks(vendor, model), [vendor, model]);
   const filtered = vendors.filter((item) =>
     `${item.name} ${item.emails.map((email) => `${email.fromName} ${email.subject} ${email.body}`).join(" ")}`
       .toLowerCase()
@@ -41,12 +53,18 @@ export default function App() {
     sourceId: string | undefined,
     origin: Selection["origin"],
     targetId?: string,
+    linkId?: string,
   ) {
-    setReviewOpen(!!targetId);
+    const alreadyFlagged = !!targetId && (drafts[vendor.id]?.added ?? []).includes(targetId);
+    setReviewOpen(!!targetId && (
+      middleView === "review" || origin === "guide" ||
+      (origin === "source" && !alreadyFlagged)
+    ));
     setSelection((previous) => ({
       productId,
       sourceId,
       targetId,
+      linkId,
       origin,
       sequence: (previous?.sequence ?? 0) + 1,
     }));
@@ -58,6 +76,33 @@ export default function App() {
   function moveReview(offset: number) {
     const target = model.targets[reviewIndex + offset];
     if (target) select(target.productId, target.source?.id, "guide", target.id);
+  }
+  const followUpState = drafts[vendor.id] ?? emptyFollowUp();
+  const currentFollowUp = followUps
+    .get(vendor.id)!
+    .find((item) => item.target.id === reviewTarget?.id);
+  function toggleFollowUp(targetId: string) {
+    const item = followUps
+      .get(vendor.id)!
+      .find((candidate) => candidate.target.id === targetId);
+    if (!item || item.destination !== "vendor") return;
+    const previous = drafts[vendor.id] ?? emptyFollowUp();
+    const id = item.target.id;
+    const added = previous.added.includes(id);
+    setDrafts((all) => ({
+      ...all,
+      [vendor.id]: {
+        ...previous,
+        added: added
+          ? previous.added.filter((value) => value !== id)
+          : [...previous.added, id],
+        included: added
+          ? previous.included.filter((value) => value !== id)
+          : previous.included.includes(id)
+            ? previous.included
+            : [...previous.included, id],
+      },
+    }));
   }
   return (
     <main
@@ -95,6 +140,7 @@ export default function App() {
                   setVendorId(item.id);
                   setSelection(null);
                   setReviewOpen(false);
+                  setMiddleView("review");
                 }}
               >
                 <div className="thread-sender">
@@ -117,17 +163,69 @@ export default function App() {
           {!filtered.length && <p className="empty">No matching threads.</p>}
         </div>
       </aside>
-      <FollowUpPane
-        key={`follow-up-${vendor.id}`}
-        vendor={vendor}
-        items={followUps.get(vendor.id)!}
-        state={drafts[vendor.id] ?? initialFollowUp(followUps.get(vendor.id)!)}
-        onChange={(state) => setDrafts((previous) => ({ ...previous, [vendor.id]: state }))}
-        selection={selection}
-        onSelect={(target) => select(target.productId, target.source?.id, "field", target.id)}
-      />
+      <ResizablePane key={`${vendor.id}-${middleView}`} autoFit={middleView === "follow-up"}>
+        <div className="workspace-tabs" role="tablist" aria-label="Quotation workflow">
+          <button
+            role="tab"
+            aria-selected={middleView === "review"}
+            onClick={() => setMiddleView("review")}
+          >
+            Quote review
+          </button>
+          <button
+            role="tab"
+            aria-selected={middleView === "follow-up"}
+            onClick={() => {
+              setMiddleView("follow-up");
+              setReviewOpen(false);
+            }}
+          >
+            Follow up with vendor
+            {!!followUpState.added.length && <span>{followUpState.added.length}</span>}
+          </button>
+        </div>
+        {middleView === "review" ? (
+          <ExtractedPane
+            onNavigate={(target) => select(target.productId, target.source?.id, "guide", target.id)}
+            fieldLinks={fieldLinks}
+            key={`fields-${vendor.id}`}
+            vendor={vendor}
+            model={model}
+            selection={selection}
+            followUpIds={new Set(followUps.get(vendor.id)!
+              .filter((item) => item.destination === "vendor")
+              .map((item) => item.target.id))}
+            addedFollowUpIds={new Set(followUpState.added)}
+            onToggleFollowUp={toggleFollowUp}
+            onSelect={(productId, sourceId, targetId, linkId) =>
+              select(productId, sourceId, "field", targetId, linkId)
+            }
+          />
+        ) : (
+          <FollowUpPane
+            key={`follow-up-${vendor.id}`}
+            vendor={vendor}
+            items={followUps.get(vendor.id)!}
+            state={followUpState}
+            onChange={(state) =>
+              setDrafts((previous) => ({ ...previous, [vendor.id]: state }))
+            }
+            selection={selection}
+            onSelect={(target) =>
+              select(target.productId, target.source?.id, "field", target.id)
+            }
+          />
+        )}
+      </ResizablePane>
       <EmailPane
+        alignSelection={middleView === "review"}
+        fieldLinks={fieldLinks}
         key={`email-${vendor.id}`}
+        followUpIds={new Set(followUps.get(vendor.id)!
+          .filter((item) => item.destination === "vendor")
+          .map((item) => item.target.id))}
+        addedFollowUpIds={new Set(followUpState.added)}
+        onToggleFollowUp={toggleFollowUp}
         guide={
           reviewOpen && reviewTarget
             ? {
@@ -140,15 +238,29 @@ export default function App() {
                 onPrevious: () => moveReview(-1),
                 onNext: () => moveReview(1),
                 onClose: () => setReviewOpen(false),
+                followUp:
+                  currentFollowUp?.destination === "vendor"
+                    ? {
+                        added: followUpState.added.includes(reviewTarget.id),
+                        onToggle: () => toggleFollowUp(reviewTarget.id),
+                        onOpen: () => {
+                          if (!followUpState.added.includes(reviewTarget.id)) {
+                            toggleFollowUp(reviewTarget.id);
+                          }
+                          setReviewOpen(false);
+                          setMiddleView("follow-up");
+                        },
+                      }
+                    : undefined,
               }
             : null
         }
         vendor={vendor}
         model={model}
         selection={selection}
-        onSelect={(productId, sourceId, targetId) =>
-          select(productId, sourceId, "source", targetId)
-        }
+        onSelect={(productId, sourceId, targetId, linkId) => {
+          select(productId, sourceId, "source", targetId, linkId);
+        }}
       />
     </main>
   );

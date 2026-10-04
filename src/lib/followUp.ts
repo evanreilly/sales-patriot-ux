@@ -11,6 +11,7 @@ export interface FollowUpItem {
   recommended: boolean;
 }
 export interface FollowUpState {
+  added: string[];
   included: string[];
   body: string | null;
   draftedIds: string[];
@@ -74,8 +75,9 @@ export function followUpItems(vendor: Vendor, model: ThreadModel): FollowUpItem[
   });
 }
 export function initialFollowUp(items: FollowUpItem[]): FollowUpState {
+  const added = items.filter((item) => item.destination === "vendor").map((item) => item.target.id);
   const included = items.filter((item) => item.recommended).map((item) => item.target.id);
-  return { included, body: null, draftedIds: included };
+  return { added, included, body: null, draftedIds: included };
 }
 export function draftFollowUp(vendor: Vendor, items: FollowUpItem[], included: string[]): string {
   const selected = items.filter((item) => item.destination === "vendor" && included.includes(item.target.id));

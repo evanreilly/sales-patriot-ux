@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef } from "react";
 import type { Vendor } from "../lib/types";
-import type { SourceSection, ThreadModel } from "../lib/evidence";
+import type { SourceSection, ThreadModel, ReviewTarget } from "../lib/evidence";
 import type { Selection } from "../App";
 import {
   formatDate,
@@ -10,40 +10,76 @@ import {
 } from "../lib/review";
 import { EvidenceMark } from "./EvidenceMark";
 import { ReviewNavigator, type ReviewGuide } from "./ReviewNavigator";
-import { centerInPane } from "../lib/scroll";
+import { alignPair, centerInPane, centerPair } from "../lib/scroll";
 import { Icon } from "./Icon";
+import { FollowUpFlag } from "./FollowUpFlag";
+import type { FieldLink } from "../lib/fieldLinks";
 
 interface Props {
+  alignSelection: boolean;
+  fieldLinks: FieldLink[];
   guide: ReviewGuide | null;
   vendor: Vendor;
   model: ThreadModel;
   selection: Selection | null;
-  onSelect: (productId: string, sourceId: string, targetId?: string) => void;
+  followUpIds: Set<string>;
+  addedFollowUpIds: Set<string>;
+  onToggleFollowUp: (id: string) => void;
+  onSelect: (productId: string, sourceId: string, targetId?: string, linkId?: string) => void;
 }
 export function EmailPane({
+  alignSelection,
+  fieldLinks,
   vendor,
   model,
   selection,
   onSelect,
   guide,
+  followUpIds,
+  addedFollowUpIds,
+  onToggleFollowUp,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const requests = requestedParts(vendor);
   const latest = latestResponse(vendor);
   useEffect(() => {
-    if (
-      !selection?.sourceId ||
-      (!selection.targetId && selection.origin === "source")
-    )
-      return;
+    if (!selection?.sourceId) return;
     const scroll = scrollRef.current;
     const target = document.getElementById(
-      selection.targetId
+      selection.linkId ? `source-link-${selection.linkId}` : selection.targetId
         ? `source-target-${selection.targetId}`
         : `source-${selection.sourceId}`,
     );
-    if (scroll && target) centerInPane(scroll, target);
-  }, [selection, !!guide]);
+    const counterpart = selection.linkId
+      ? document.getElementById(`field-link-${selection.linkId}`)
+      : selection.targetId
+        ? document.getElementById(`field-target-${selection.targetId}`)
+        : document.querySelector<HTMLElement>(".extracted .source-selected-field") ??
+          document.getElementById(`part-header-${selection.productId}`);
+    if (selection.origin === "guide") {
+      if (alignSelection && target && counterpart) centerPair(counterpart, target);
+      else if (scroll && target) centerInPane(scroll, target);
+      return;
+    }
+    // Follow-up selection never levels the list against the source email.
+    if (!alignSelection) return;
+    if (target && counterpart) {
+      if (selection.origin === "source") alignPair(target, counterpart);
+      else alignPair(counterpart, target);
+    }
+    else if (scroll && target && selection.origin !== "source") centerInPane(scroll, target);
+  }, [selection, alignSelection]);
+  function mark(target: ReviewTarget, sourceId: string, text: string) {
+    const label = <EvidenceMark target={target} side="source"
+      active={selection?.targetId === target.id}
+      onSelect={() => onSelect(target.productId, sourceId, target.id)}>{text}</EvidenceMark>;
+    if (!followUpIds.has(target.id)) return label;
+    return <span className="field-evidence-actions source-evidence-actions">
+      {label}
+      <FollowUpFlag label={target.label} added={addedFollowUpIds.has(target.id)}
+        onToggle={() => onToggleFollowUp(target.id)} />
+    </span>;
+  }
   function renderSource(section: SourceSection) {
     return (
       <div className="message-body" key={section.id}>
@@ -69,29 +105,32 @@ export function EmailPane({
                   (target) => target.location === "inferred",
                 );
                 const active =
-                  !selection?.targetId && selection?.sourceId === line.id;
+                  !selection?.linkId && !selection?.targetId && selection?.sourceId === line.id;
+                const links = fieldLinks.filter(link => link.sourceId === line.id &&
+                  !exact.some(target => target.range![0] < link.range[1] && target.range![1] > link.range[0]));
+                const regions = [
+                  ...exact.map(target => ({ range: target.range!, key: target.id,
+                    content: mark(target, line.id, line.text.slice(...target.range!)) })),
+                  ...links.map(link => ({ range: link.range, key: link.id,
+                    content: <button id={`source-link-${link.id}`}
+                      className={`source-field-region ${selection?.linkId === link.id ? "selected-linked-value" : ""}`}
+                      onClick={() => onSelect(link.productId, line.id, undefined, link.id)}>
+                      {line.text.slice(...link.range)}
+                    </button> })),
+                ].sort((a, b) => a.range[0] - b.range[0]);
                 const segments = [];
                 let cursor = 0;
-                for (const target of exact) {
-                  const [start, end] = target.range!;
+                for (const region of regions) {
+                  const [start, end] = region.range;
                   segments.push(
-                    <Fragment key={target.id}>
+                    <Fragment key={region.key}>
                       <span>{line.text.slice(cursor, start)}</span>
-                      <EvidenceMark
-                        target={target}
-                        side="source"
-                        active={selection?.targetId === target.id}
-                        onSelect={(target) =>
-                          onSelect(target.productId, line.id, target.id)
-                        }
-                      >
-                        {line.text.slice(start, end)}
-                      </EvidenceMark>
+                      {region.content}
                     </Fragment>,
                   );
                   cursor = end;
                 }
-                if (exact.length)
+                if (regions.length)
                   segments.push(
                     <span key="tail">{line.text.slice(cursor)}</span>,
                   );
@@ -101,7 +140,7 @@ export function EmailPane({
                     id={`source-${line.id}`}
                     className={`email-line ${active ? "active-line" : ""}`}
                   >
-                    {exact.length ? (
+                    {regions.length ? (
                       <div className="marked-source-line">{segments}</div>
                     ) : product && line.text.trim() ? (
                       <button
@@ -119,16 +158,7 @@ export function EmailPane({
                         <span className="annotation-label">
                           Review note · expected here
                         </span>
-                        <EvidenceMark
-                          target={target}
-                          side="source"
-                          active={selection?.targetId === target.id}
-                          onSelect={(target) =>
-                            onSelect(target.productId, line.id, target.id)
-                          }
-                        >
-                          {target.label}
-                        </EvidenceMark>
+                        {mark(target, line.id, target.label)}
                       </div>
                     ))}
                   </div>

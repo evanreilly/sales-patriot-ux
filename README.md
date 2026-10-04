@@ -1,6 +1,6 @@
 # Email quote review
 
-React + TypeScript prototype with three full-height columns: threads, vendor follow-up, and complete email conversations. Plain CSS, system fonts, React and React DOM only. The `inverse` branch explores drafting vendor follow-ups; `main` retains the extracted-fields review interface.
+React + TypeScript prototype with three full-height columns: threads, a tabbed quotation workflow, and complete email conversations. The middle column keeps the extracted-fields review and vendor follow-up draft as separate tabs while the ground-truth email chain remains visible on the right. Plain CSS, system fonts, React and React DOM only.
 
 ```sh
 npm install
@@ -13,16 +13,16 @@ Vite serves http://localhost:5173 by default. Tests require Node 22.6 or newer.
 
 ## Drafting a vendor follow-up
 
-Select questions in the middle pane to include them in an editable email, grouped by part. Source links open the corresponding evidence in the conversation; the floating guide steps through all review targets. The full sent/received chain and attachment text remain visible.
+Start in **Quote review** and open an issue to see the floating review guide beside its source. **Follow up with vendor** toggles that issue in the thread's follow-up list; **View draft** opens the separate follow-up tab. Vendor-eligible extraction issues also have a flag toggle for adding or removing them in one click without opening the guide. Added questions are grouped by part and selecting a row reopens the corresponding evidence. The full sent/received chain and attachment text remain visible on the right throughout.
 
 The fixture adapter distinguishes vendor questions from extraction checks:
 
 - Missing quantity pricing, alternate parts, and fields that cannot be confirmed in the reply are suggested vendor questions.
-- Missing extracted values already present in the source stay under **Check extraction** and are excluded from generated emails.
+- Missing extracted values already present in the source are excluded from the vendor follow-up action.
 - Arithmetic discrepancies require checking the extraction first.
-- Explicit no-bids, extra stock, and additional quantity tiers are optional follow-ups, unchecked initially.
+- Explicit no-bids, extra stock, and additional quantity tiers remain available as optional follow-ups.
 
-The draft updates from the checklist until manually edited. Later selection changes preserve those edits and offer an explicit replacement action. Each thread retains its draft and selection in React state while the app is open; reloading resets them. **Copy email** copies recipient, subject, and body. There is no send integration.
+Questions added from review remain in the vendor follow-up list. Their checkboxes independently include or exclude them from the current email, so users can revisit flagged issues while shaping the draft. The draft updates with those checkbox choices until manually edited; later changes preserve those edits and offer an explicit replacement action. Each thread retains its list, draft, and selections in React state while the app is open; reloading resets them. **Send email** opens the addressed, composed message in the user's default email client for review and sending.
 
 Suggestions and wording are deterministic rules over the seeded fixture, not LLM output. Source matching is tailored to the fixture's email formats, so these are review suggestions rather than definitive vendor fault findings. The UI does not correct or mutate extracted data.
 
@@ -34,7 +34,7 @@ Suggestions and wording are deterministic rules over the seeded fixture, not LLM
 - `src/lib/evidence.ts`: per-field targets, exact ranges, inferred locations, and explanations.
 - `src/lib/issueClasses.ts`: shared issue-category colors and grouping.
 - `src/lib/followUp.ts`: vendor/extraction routing, suggested questions, and grouped draft generation.
-- `src/components/FollowUpPane.tsx`: question checklist, source links, editable draft, and clipboard action.
+- `src/components/FollowUpPane.tsx`: added-question list, source links, editable preview, and clipboard action.
 - `src/components/IssueOverview.tsx`: overall category distribution and totals.
 - `src/components/IssueBar.tsx`: reusable proportional bar for the overview and thread list.
 - `src/components/ReviewNavigator.tsx`: floating Next/Previous issue guide.
@@ -43,7 +43,7 @@ Suggestions and wording are deterministic rules over the seeded fixture, not LLM
 - `src/components/ExtractedPane.tsx`: all extracted fields, part-header count dots, and individual discrepancy targets.
 - `src/App.tsx`: thread selection and bidirectional navigation.
 
-Sixteen tests cover validation, source mapping, distinct spans and consistent category colors, inference fallback, and the distinction between missing extraction and missing vendor pricing. Follow-up browser checks cover checkbox selection, preserving edited drafts across threads, explicit rebuilding, clipboard output, evidence navigation, the issue-free thread, and a narrower desktop viewport.
+Sixteen tests cover validation, source mapping, distinct spans and consistent category colors, inference fallback, the distinction between missing extraction and missing vendor pricing, and follow-up question routing and draft generation.
 
 The fixture contains one extraction snapshot per vendor. Direction and evidence are inferred from its known formats; production should provide explicit thread membership, message direction, requested parts, and exact source spans. Attachment previews use supplied page text, not rendered PDFs. The UI does not modify quote data or send email.
 

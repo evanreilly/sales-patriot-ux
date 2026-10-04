@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import type { Product, Vendor } from "../lib/types";
 import type { ThreadModel, SourceLine, ReviewTarget } from "../lib/evidence";
 import type { Selection } from "../App";
@@ -6,29 +5,42 @@ import { findFieldSource, findRequestSource } from "../lib/evidence";
 import { matchRequest, money, requestedParts } from "../lib/review";
 import { groupIssues, issueColor } from "../lib/issueClasses";
 import { IssueOverview } from "./IssueOverview";
-import { centerInPane } from "../lib/scroll";
 import { EvidenceMark } from "./EvidenceMark";
+import { FollowUpFlag } from "./FollowUpFlag";
+import type { FieldLink } from "../lib/fieldLinks";
 
 interface Props {
+  fieldLinks: FieldLink[];
   vendor: Vendor;
   model: ThreadModel;
   selection: Selection | null;
-  onSelect: (productId: string, sourceId?: string, targetId?: string) => void;
+  followUpIds: Set<string>;
+  addedFollowUpIds: Set<string>;
+  onToggleFollowUp: (targetId: string) => void;
+  onNavigate: (target: ReviewTarget) => void;
+  onSelect: (productId: string, sourceId?: string, targetId?: string, linkId?: string) => void;
 }
-export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+export function ExtractedPane({
+  fieldLinks,
+  vendor,
+  model,
+  selection,
+  followUpIds,
+  addedFollowUpIds,
+  onToggleFollowUp,
+  onNavigate,
+  onSelect,
+}: Props) {
   const requests = requestedParts(vendor);
-  useEffect(() => {
-    if (!selection || (!selection.targetId && selection.origin !== "source"))
-      return;
-    const scroll = scrollRef.current;
-    const target = document.getElementById(
-      selection.targetId
-        ? `field-target-${selection.targetId}`
-        : `fields-${selection.productId}`,
-    );
-    if (scroll && target) centerInPane(scroll, target);
-  }, [selection]);
+  function isSourceSelected(sourceId?: string) {
+    return !!sourceId && !selection?.linkId && !selection?.targetId && selection?.sourceId === sourceId;
+  }
+  function plainValue(product: Product, field: string, quantity: number, value: string | number | null) {
+    const link = fieldLinks.find(l => l.productId === product.id && l.field === field && l.quantity === quantity);
+    if (!link) return value;
+    return <button id={`field-link-${link.id}`} className={selection?.linkId === link.id ? "selected-linked-value" : ""}
+      onClick={() => onSelect(product.id, link.sourceId, undefined, link.id)}>{value}</button>;
+  }
   const selectTarget = (target: ReviewTarget) =>
     onSelect(target.productId, target.source?.id, target.id);
   function showSource(product: Product | null, needle: string) {
@@ -38,15 +50,22 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
     );
   }
   function mark(target: ReviewTarget, value: string | number) {
+    const canFollowUp = followUpIds.has(target.id);
+    const added = addedFollowUpIds.has(target.id);
     return (
-      <EvidenceMark
-        target={target}
-        side="field"
-        active={selection?.targetId === target.id}
-        onSelect={selectTarget}
-      >
-        {value}
-      </EvidenceMark>
+      <span className="field-evidence-actions">
+        {canFollowUp && (
+          <FollowUpFlag label={target.label} added={added} onToggle={() => onToggleFollowUp(target.id)} />
+        )}
+        <EvidenceMark
+          target={target}
+          side="field"
+          active={selection?.targetId === target.id}
+          onSelect={selectTarget}
+        >
+          {value}
+        </EvidenceMark>
+      </span>
     );
   }
   function field(
@@ -73,8 +92,11 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
             ? "Yes"
             : "No"
           : value;
+    const link = fieldLinks.find(l => l.productId === (product?.id ?? "") && l.field === key && l.quantity === undefined);
     return (
-      <div className="field-row" key={key}>
+      <div id={link ? `field-link-${link.id}` : undefined}
+        className={`field-row ${(link ? selection?.linkId === link.id : isSourceSelected(source?.id)) || (target && selection?.targetId === target.id) ? "source-selected-field" : ""}`}
+        data-source-id={source?.id} key={key}>
         <dt>{label}</dt>
         <dd>
           {target ? (
@@ -82,7 +104,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
           ) : (
             <button
               disabled={!source}
-              onClick={() => onSelect(product?.id ?? "", source?.id)}
+              onClick={() => onSelect(product?.id ?? "", link?.sourceId ?? source?.id, undefined, link?.id)}
               title={source ? "Show source text" : "No source text available"}
             >
               {text}
@@ -97,8 +119,8 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
       {model.targets.length > 0 && <header className="column-header">
         <h2>{model.targets.length} issues to resolve</h2>
       </header>}
-      <div className="fields-scroll" ref={scrollRef}>
-        <IssueOverview targets={model.targets} products={vendor.products} onSelect={selectTarget} />
+      <div className="fields-scroll">
+        <IssueOverview targets={model.targets} products={vendor.products} onSelect={onNavigate} />
         <section className="vendor-fields">
           <dl>
             {field(
@@ -153,7 +175,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
               id={`fields-${product.id}`}
               className={`product-fields ${selection?.productId === product.id ? "selected-product" : ""}`}
             >
-              <header className="product-header">
+              <header className="product-header" id={`part-header-${product.id}`}>
                 <div className="part-issue-counts">
                   {groupIssues(targets).map((group) => (
                     <button
@@ -163,7 +185,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                       data-count={group.count}
                       data-product-id={product.id}
                       aria-label={`${group.count} ${group.label.toLowerCase()} · ${product.partNumber}`}
-                      onClick={() => selectTarget(group.targets[0])}
+                      onClick={() => onNavigate(group.targets[0])}
                     >
                       <span
                         className="issue-count-dot"
@@ -194,6 +216,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                 </div>
 
               </header>
+              <div className="product-content">
               {identity && (
                 <p className="identity-context">
                   {request ? (
@@ -295,8 +318,12 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {product.lines.map((line) => (
-                        <tr key={line.id}>
+                      {product.lines.map((line) => {
+                        const source = findFieldSource(model.sources, vendor, product, `qty ${line.quantity}:`);
+                        const selected = isSourceSelected(source?.id);
+                        return (
+                        <tr key={line.id} data-source-id={source?.id}
+                          className={selected ? "source-selected-field" : ""}>
                           <td>
                             {lineTarget("quantity", line.quantity) ? (
                               mark(
@@ -304,13 +331,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                                 line.quantity,
                               )
                             ) : (
-                              <button
-                                onClick={() =>
-                                  showSource(product, `qty ${line.quantity}:`)
-                                }
-                              >
-                                {line.quantity}
-                              </button>
+                              plainValue(product, "quantity", line.quantity, line.quantity)
                             )}
                           </td>
                           <td>
@@ -321,14 +342,14 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                                     ? "Missing"
                                     : money(line.unitCost, line.currency),
                                 )
-                              : money(line.unitCost, line.currency)}
+                              : plainValue(product, "unitCost", line.quantity, money(line.unitCost, line.currency))}
                             <small className="price-currency">
                               {lineTarget("currency", line.quantity)
                                 ? mark(
                                     lineTarget("currency", line.quantity)!,
                                     "Currency?",
                                   )
-                                : line.currency}
+                                : plainValue(product, "currency", line.quantity, line.currency)}
                             </small>
                           </td>
                           <td>
@@ -339,7 +360,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                                     ? "Missing"
                                     : money(line.price, line.currency),
                                 )
-                              : money(line.price, line.currency)}
+                              : plainValue(product, "price", line.quantity, money(line.price, line.currency))}
                           </td>
                           <td>
                             {lineTarget("leadTime", line.quantity)
@@ -349,12 +370,12 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                                     ? "Missing"
                                     : `${line.leadTime}d`,
                                 )
-                              : line.leadTime === null
+                              : plainValue(product, "leadTime", line.quantity, line.leadTime === null
                                 ? "Missing"
-                                : `${line.leadTime}d`}
+                                : `${line.leadTime}d`)}
                           </td>
                         </tr>
-                      ))}
+                      ); })}
                       {missingBreaks.map((target) => (
                         <tr className="missing-break" key={target.id}>
                           <td>{target.quantity}</td>
@@ -392,6 +413,7 @@ export function ExtractedPane({ vendor, model, selection, onSelect }: Props) {
                     {line.variance ? ` Variance ${line.variance}.` : ""}
                   </p>
                 ))}
+              </div>
             </section>
           );
         })}

@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import type { ReviewTarget } from "../lib/evidence";
 import { issueStyle, issueColor, issueTextColor } from "../lib/issueClasses";
-import { centerInPane } from "../lib/scroll";
 import { Icon } from "./Icon";
+import { FollowUpFlag } from "./FollowUpFlag";
 
 export interface ReviewGuide {
   target: ReviewTarget;
@@ -12,6 +12,11 @@ export interface ReviewGuide {
   onPrevious: () => void;
   onNext: () => void;
   onClose: () => void;
+  followUp?: {
+    added: boolean;
+    onToggle: () => void;
+    onOpen: () => void;
+  };
 }
 export function ReviewNavigator({ guide }: { guide: ReviewGuide }) {
   const nextRef = useRef<HTMLButtonElement>(null);
@@ -57,7 +62,6 @@ export function ReviewNavigator({ guide }: { guide: ReviewGuide }) {
       card.style.setProperty("--anchor-x", `${anchorX - left}px`);
     };
     const resize = () => {
-      centerInPane(pane, target);
       position();
     };
     const observer = new ResizeObserver(resize);
@@ -72,6 +76,7 @@ export function ReviewNavigator({ guide }: { guide: ReviewGuide }) {
     };
   }, [guide.target.id]);
   const category = issueStyle(guide.target);
+  const last = guide.index === guide.total - 1;
   return (
     <section
       className="review-navigator"
@@ -111,16 +116,22 @@ export function ReviewNavigator({ guide }: { guide: ReviewGuide }) {
         >
           Previous
         </button>
-        <button
-          className="review-next"
-          ref={nextRef}
-          onClick={
-            guide.index === guide.total - 1 ? guide.onClose : guide.onNext
-          }
-        >
-          {guide.index === guide.total - 1 ? "Finish review" : "Next field"}
-          <Icon name="arrow" size={15} />
-        </button>
+        <div className="review-action-stack">
+          <div className="review-next-row">
+            {guide.followUp && <FollowUpFlag label={guide.target.label}
+              added={guide.followUp.added} onToggle={guide.followUp.onToggle} />}
+            <button
+              className="review-next"
+              ref={nextRef}
+              onClick={
+                guide.index === guide.total - 1 ? guide.onClose : guide.onNext
+              }
+            >
+              {last ? "Done" : "Next"}
+              <Icon name="arrow" size={15} />
+            </button>
+          </div>
+        </div>
       </div>
       </div>
     </section>

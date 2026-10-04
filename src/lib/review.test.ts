@@ -234,6 +234,56 @@ test("vendor follow-up separates extraction gaps from unanswered vendor question
   assert.equal(draftFollowUp(vendor, items, []), "");
 });
 
+test("vendor header fields link independently and preserve complete email addresses", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { buildFieldLinks } = await import("./fieldLinks.ts");
+  for (const vendor of vendors) {
+    const model = buildThreadModel(vendor);
+    const links = buildFieldLinks(vendor, model).filter(link => link.productId === "");
+    assert.deepEqual(links.map(link => link.field), ["terms", "valid", "contact"]);
+    const contact = links.find(link => link.field === "contact")!;
+    const source = model.sources.flatMap(s => s.blocks.flatMap(b => b.lines)).find(l => l.id === contact.sourceId)!;
+    if (source.text.includes(vendor.contactEmail)) {
+      assert.ok(source.text.slice(...contact.range).includes(vendor.contactEmail));
+    }
+  }
+});
+
+test("field links split shared source lines without splitting certification values", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { buildFieldLinks } = await import("./fieldLinks.ts");
+  const vendor = vendors[0];
+  const model = buildThreadModel(vendor);
+  const links = buildFieldLinks(vendor, model).filter(link => link.productId === vendor.products[0].id);
+  const cert = links.find(link => link.field === "certifications")!;
+  const source = model.sources.flatMap(s => s.blocks.flatMap(b => b.lines)).find(l => l.id === cert.sourceId)!;
+  assert.equal(source.text.slice(...cert.range), "certs C of C; DFARS");
+  const shared = links.filter(link => link.sourceId === cert.sourceId);
+  assert.deepEqual(new Set(shared.map(link => link.field)), new Set(["certifications", "packagingIncluded", "shippingIncluded", "nreCost"]));
+  for (const left of shared) for (const right of shared) {
+    if (left === right) continue;
+    assert.ok(left.range[1] <= right.range[0] || right.range[1] <= left.range[0]);
+  }
+});
+
+test("field links have unique, literal, nonoverlapping spans alongside existing issue markers", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { buildFieldLinks } = await import("./fieldLinks.ts");
+  for (const vendor of vendors) {
+    const model = buildThreadModel(vendor);
+    const links = buildFieldLinks(vendor, model);
+    assert.equal(new Set(links.map(l => l.id)).size, links.length);
+    const spans = [...links, ...model.targets.filter(t => t.range).map(t => ({ sourceId: t.source!.id, range: t.range! }))];
+    for (const link of links) {
+      const source = model.sources.flatMap(s => s.blocks.flatMap(b => b.lines)).find(l => l.id === link.sourceId)!;
+      assert.ok(source && link.range[0] >= 0 && link.range[1] <= source.text.length && link.range[0] < link.range[1]);
+      for (const span of spans) if (span !== link && span.sourceId === link.sourceId) {
+        assert.ok(link.range[1] <= span.range[0] || span.range[1] <= link.range[0], link.id);
+      }
+    }
+  }
+});
+
 test("vendor follow-up treats explicit unknown source values as vendor questions", async () => {
   const { buildThreadModel } = await import("./evidence.ts");
   const { followUpItems, initialFollowUp } = await import("./followUp.ts");

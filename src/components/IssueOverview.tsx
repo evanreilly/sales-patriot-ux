@@ -39,12 +39,12 @@ export function IssueOverview({ targets, products, onSelect }: {
               const product = products.find((item) => item.id === target.productId);
               return (
                 <li key={target.id}>
-                  <button onClick={() => onSelect(target)}>
+                  <button className="expanded-issue-row" onClick={() => onSelect(target)}>
                     <span className="expanded-issue-part">
                       <strong>{product?.description}</strong>
                       <small>{product?.partNumber}</small>
                     </span>
-                    <span className="expanded-issue-label" style={{ color: issueTextColor(active.hue) }}>{target.label} <span aria-hidden="true">→</span></span>
+                    <span className="expanded-issue-label" style={{ color: issueTextColor(active.hue) }}>{target.label}</span>
                   </button>
                 </li>
               );

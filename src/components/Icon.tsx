@@ -19,6 +19,12 @@ const paths = {
     </>
   ),
   file: <path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h6" />,
+  flag: (
+    <>
+      <path d="M6 21V3" />
+      <path className="flag-pennant" d="M7 4v10l11-5Z" />
+    </>
+  ),
   arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,
   close: <path d="m6 6 12 12M6 18 18 6" />,
 } as const;
