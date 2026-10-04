@@ -212,3 +212,36 @@ test("missing source evidence falls back to a labeled inferred location", async 
   assert.match(target.explanation, /best guess/);
   assert.ok(target.source?.text.includes(vendor.products[0].partNumber));
 });
+
+test("vendor follow-up separates extraction gaps from unanswered vendor questions", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { followUpItems, initialFollowUp, draftFollowUp } = await import("./followUp.ts");
+  const vendor = vendors[0];
+  const items = followUpItems(vendor, buildThreadModel(vendor));
+  const unitPrice = items.find((item) => item.target.field === "unitCost")!;
+  assert.equal(unitPrice.destination, "extraction");
+  assert.match(unitPrice.reason, /1\.74/);
+  const missingQuantity = items.find((item) => item.target.quantity === 250 && item.target.category === "quantity")!;
+  assert.equal(missingQuantity.destination, "vendor");
+  const state = initialFollowUp(items);
+  assert.ok(state.included.includes(missingQuantity.target.id));
+  assert.ok(!state.included.includes(unitPrice.target.id));
+  assert.ok(!items.filter((item) => item.target.category === "no-bid" || item.target.category === "extra").some((item) => state.included.includes(item.target.id)));
+  const draft = draftFollowUp(vendor, items, [...state.included, unitPrice.target.id]);
+  assert.match(draft, /pricing and lead time for 250 units/);
+  assert.match(draft, /NAS1149F0832P/);
+  assert.doesNotMatch(draft, /confirm unit price/);
+  assert.equal(draftFollowUp(vendor, items, []), "");
+});
+
+test("vendor follow-up treats explicit unknown source values as vendor questions", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { followUpItems, initialFollowUp } = await import("./followUp.ts");
+  const vendor = vendors[2];
+  const items = followUpItems(vendor, buildThreadModel(vendor));
+  const origin = items.find((item) => item.target.field === "coo")!;
+  assert.equal(origin.destination, "vendor");
+  assert.ok(initialFollowUp(items).included.includes(origin.target.id));
+  assert.match(origin.question, /country of origin/);
+  assert.equal(followUpItems(vendors[3], buildThreadModel(vendors[3])).length, 0);
+});

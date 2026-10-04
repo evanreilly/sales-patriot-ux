@@ -4,7 +4,8 @@ import type { Vendor } from "./lib/types";
 import { buildThreadModel } from "./lib/evidence";
 import { formatDate, latestResponse } from "./lib/review";
 import { EmailPane } from "./components/EmailPane";
-import { ExtractedPane } from "./components/ExtractedPane";
+import { FollowUpPane } from "./components/FollowUpPane";
+import { followUpItems, initialFollowUp, type FollowUpState } from "./lib/followUp";
 import { IssueBar } from "./components/IssueBar";
 import { Icon } from "./components/Icon";
 
@@ -26,6 +27,8 @@ export default function App() {
       new Map(vendors.map((vendor) => [vendor.id, buildThreadModel(vendor)])),
     [],
   );
+  const followUps = useMemo(() => new Map(vendors.map((item) => [item.id, followUpItems(item, models.get(item.id)!)])), [models]);
+  const [drafts, setDrafts] = useState<Record<string, FollowUpState>>({});
   const vendor = vendors.find((item) => item.id === vendorId)!;
   const model = models.get(vendor.id)!;
   const filtered = vendors.filter((item) =>
@@ -58,7 +61,7 @@ export default function App() {
   }
   return (
     <main
-      className={`mail-workspace ${reviewOpen && reviewTarget ? "review-active" : ""}`}
+      className={`mail-workspace follow-up-workspace ${reviewOpen && reviewTarget ? "review-active" : ""}`}
     >
       <aside className="thread-list" aria-label="Email threads">
         <header className="column-header">
@@ -114,14 +117,14 @@ export default function App() {
           {!filtered.length && <p className="empty">No matching threads.</p>}
         </div>
       </aside>
-      <ExtractedPane
-        key={`fields-${vendor.id}`}
+      <FollowUpPane
+        key={`follow-up-${vendor.id}`}
         vendor={vendor}
-        model={model}
+        items={followUps.get(vendor.id)!}
+        state={drafts[vendor.id] ?? initialFollowUp(followUps.get(vendor.id)!)}
+        onChange={(state) => setDrafts((previous) => ({ ...previous, [vendor.id]: state }))}
         selection={selection}
-        onSelect={(productId, sourceId, targetId) =>
-          select(productId, sourceId, "field", targetId)
-        }
+        onSelect={(target) => select(target.productId, target.source?.id, "field", target.id)}
       />
       <EmailPane
         key={`email-${vendor.id}`}
