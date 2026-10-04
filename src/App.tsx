@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import fixture from "./data/state.json";
 import type { Vendor } from "./lib/types";
 import { buildThreadModel } from "./lib/evidence";
@@ -11,8 +11,10 @@ import { IssueBar } from "./components/IssueBar";
 import { Icon } from "./components/Icon";
 import { ResizablePane } from "./components/ResizablePane";
 import { buildFieldLinks } from "./lib/fieldLinks";
+import { AuditPane } from "./components/AuditPane";
+import { applyOverride, auditStorageKey, overrideValue, readAudit, type AuditEvent, type EditTarget, type OverrideValue } from "./lib/audit";
 
-const vendors: Vendor[] = fixture.vendors;
+const seedVendors: Vendor[] = fixture.vendors;
 const emptyFollowUp = (): FollowUpState => ({
   added: [],
   included: [],
@@ -28,20 +30,61 @@ export interface Selection {
   sequence: number;
 }
 export default function App() {
+  const [savedAudit] = useState(() => {
+    try { return { events: readAudit(), warning: "" }; }
+    catch { return { events: [] as AuditEvent[], warning: "Saved history could not be loaded. Existing browser data has not been overwritten; new changes are session-only." }; }
+  });
+  const [audit, setAudit] = useState<AuditEvent[]>(savedAudit.events);
+  const [storageWarning, setStorageWarning] = useState(savedAudit.warning);
+  useEffect(() => {
+    if (savedAudit.warning) return;
+    try { localStorage.setItem(auditStorageKey, JSON.stringify(audit)); }
+    catch { setStorageWarning("Browser storage is unavailable. Changes and history will only last for this session."); }
+  }, [audit, savedAudit.warning]);
+  const vendors = useMemo(() => seedVendors.map(vendor => audit.filter(event => event.vendorId === vendor.id && event.kind === "edit")
+    .reduce((current, event) => applyOverride(current, event.target!, event.after!), vendor)), [audit]);
   const [vendorId, setVendorId] = useState(vendors[0].id);
+  const [editing, setEditing] = useState<EditTarget | null>(null);
+  const [editInModal, setEditInModal] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [middleView, setMiddleView] = useState<"review" | "follow-up">("review");
+  const [middleView, setMiddleView] = useState<"review" | "follow-up" | "audit">("review");
   const models = useMemo(
     () =>
       new Map(vendors.map((vendor) => [vendor.id, buildThreadModel(vendor)])),
-    [],
+    [vendors],
   );
   const followUps = useMemo(() => new Map(vendors.map((item) => [item.id, followUpItems(item, models.get(item.id)!)])), [models]);
   const [drafts, setDrafts] = useState<Record<string, FollowUpState>>({});
   const vendor = vendors.find((item) => item.id === vendorId)!;
   const model = models.get(vendor.id)!;
+  const editableTargets = useMemo(() => buildThreadModel(seedVendors.find(v => v.id === vendorId)!).targets.filter(t => t.category === "missing"), [vendorId]);
+  function record(event: Omit<AuditEvent, "id" | "at" | "vendorId">) {
+    setAudit(previous => [...previous, { ...event, id: crypto.randomUUID(), at: new Date().toISOString(), vendorId }]);
+  }
+  function startEdit(target: EditTarget, inModal = false) {
+    setEditing(target);
+    setEditInModal(inModal);
+    if (!inModal) {
+      setReviewOpen(false);
+      setMiddleView("review");
+    }
+  }
+  function saveEdit(value: OverrideValue) {
+    if (!editing) return;
+    const before = overrideValue(vendor, editing);
+    if (before !== value) {
+      record({ kind: "edit", title: "Manual Override", target: editing, before, after: value,
+        detail: `You · ${vendor.products.find(p => p.id === editing.productId)!.partNumber} · ${editing.label.replace(/ missing| not extracted/g, "")}` });
+      setDrafts(all => {
+        const state = all[vendorId];
+        return !state ? all : { ...all, [vendorId]: { ...state, added: state.added.filter(id => id !== editing.id), included: state.included.filter(id => id !== editing.id) } };
+      });
+    }
+    setEditing(null);
+    setSelection(null);
+  }
   const fieldLinks = useMemo(() => buildFieldLinks(vendor, model), [vendor, model]);
   const filtered = vendors.filter((item) =>
     `${item.name} ${item.emails.map((email) => `${email.fromName} ${email.subject} ${email.body}`).join(" ")}`
@@ -55,10 +98,11 @@ export default function App() {
     targetId?: string,
     linkId?: string,
   ) {
+    setEditing(null);
     const alreadyFlagged = !!targetId && (drafts[vendor.id]?.added ?? []).includes(targetId);
     setReviewOpen(!!targetId && (
       middleView === "review" || origin === "guide" ||
-      (origin === "source" && !alreadyFlagged)
+      (middleView === "follow-up" && origin === "source" && !alreadyFlagged)
     ));
     setSelection((previous) => ({
       productId,
@@ -89,6 +133,7 @@ export default function App() {
     const previous = drafts[vendor.id] ?? emptyFollowUp();
     const id = item.target.id;
     const added = previous.added.includes(id);
+    record({ kind: "follow-up", title: added ? "Removed from Vendor Follow-Up" : "Flagged for Vendor Follow-Up", detail: `You · ${item.product.partNumber} · ${item.target.label}` });
     setDrafts((all) => ({
       ...all,
       [vendor.id]: {
@@ -138,6 +183,7 @@ export default function App() {
                 aria-pressed={item.id === vendorId}
                 onClick={() => {
                   setVendorId(item.id);
+                  setEditing(null);
                   setSelection(null);
                   setReviewOpen(false);
                   setMiddleView("review");
@@ -177,15 +223,24 @@ export default function App() {
             aria-selected={middleView === "follow-up"}
             onClick={() => {
               setMiddleView("follow-up");
+              setEditing(null);
               setReviewOpen(false);
             }}
           >
             Follow up with vendor
             {!!followUpState.added.length && <span>{followUpState.added.length}</span>}
           </button>
+          <button role="tab" aria-selected={middleView === "audit"} onClick={() => {
+            setMiddleView("audit"); setReviewOpen(false); setEditing(null);
+          }}>Audit</button>
         </div>
         {middleView === "review" ? (
           <ExtractedPane
+            editableTargets={editableTargets}
+            editing={editInModal ? null : editing}
+            onEdit={startEdit}
+            onSaveEdit={saveEdit}
+            onCancelEdit={() => setEditing(null)}
             onNavigate={(target) => select(target.productId, target.source?.id, "guide", target.id)}
             fieldLinks={fieldLinks}
             key={`fields-${vendor.id}`}
@@ -201,8 +256,9 @@ export default function App() {
               select(productId, sourceId, "field", targetId, linkId)
             }
           />
-        ) : (
+        ) : middleView === "follow-up" ? (
           <FollowUpPane
+            onSendEmail={(subject, body) => record({ kind: "email-sent", title: "Email Sent", detail: `You · To ${vendor.contactEmail} · ${subject}`, body })}
             key={`follow-up-${vendor.id}`}
             vendor={vendor}
             items={followUps.get(vendor.id)!}
@@ -215,7 +271,7 @@ export default function App() {
               select(target.productId, target.source?.id, "field", target.id)
             }
           />
-        )}
+        ) : <AuditPane vendor={vendor} events={audit} storageWarning={storageWarning} />}
       </ResizablePane>
       <EmailPane
         alignSelection={middleView === "review"}
@@ -238,6 +294,13 @@ export default function App() {
                 onPrevious: () => moveReview(-1),
                 onNext: () => moveReview(1),
                 onClose: () => setReviewOpen(false),
+                edit: reviewTarget.category === "missing" ? {
+                  active: editInModal && editing?.id === reviewTarget.id,
+                  value: overrideValue(vendor, reviewTarget),
+                  onStart: () => startEdit(reviewTarget, true),
+                  onSave: saveEdit,
+                  onCancel: () => setEditing(null),
+                } : undefined,
                 followUp:
                   currentFollowUp?.destination === "vendor"
                     ? {

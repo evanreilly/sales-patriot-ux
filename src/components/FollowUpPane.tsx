@@ -3,15 +3,16 @@ import type { Selection } from "../App";
 import type { Vendor } from "../lib/types";
 import type { ReviewTarget } from "../lib/evidence";
 import { draftFollowUp, type FollowUpItem, type FollowUpState } from "../lib/followUp";
-import { issueColor, issueTextColor } from "../lib/issueClasses";
+import { issueColor } from "../lib/issueClasses";
 
-export function FollowUpPane({ vendor, items, state, onChange, selection, onSelect }: {
+export function FollowUpPane({ vendor, items, state, onChange, selection, onSelect, onSendEmail }: {
   vendor: Vendor;
   items: FollowUpItem[];
   state: FollowUpState;
   onChange: (state: FollowUpState) => void;
   selection: Selection | null;
   onSelect: (target: ReviewTarget) => void;
+  onSendEmail: (subject: string, body: string) => void;
 }) {
   const [sendStatus, setSendStatus] = useState("");
   const vendorItems = items.filter(
@@ -31,9 +32,9 @@ export function FollowUpPane({ vendor, items, state, onChange, selection, onSele
     });
   }
   function sendEmail() {
-    const url = `mailto:${encodeURIComponent(vendor.contactEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSendStatus("Opening your email app…");
-    window.location.assign(url);
+    // Prototype-only delivery: record the send without opening an external app.
+    onSendEmail(subject, body);
+    setSendStatus("Email sent");
   }
   function renderItems(list: FollowUpItem[], selectable: boolean) {
     return vendor.products.map((product) => {
@@ -66,7 +67,6 @@ export function FollowUpPane({ vendor, items, state, onChange, selection, onSele
                 <span className="follow-up-divider" aria-hidden="true" />
                 <p title={selectable ? item.question : item.reason}>{selectable ? item.question : item.reason}</p>
               </div>
-              <span className="follow-up-number" style={{ color: issueTextColor(item.target.hue) }}>{String(item.target.number).padStart(2, "0")}</span>
             </div>
           ))}
         </section>
@@ -88,7 +88,7 @@ export function FollowUpPane({ vendor, items, state, onChange, selection, onSele
         {stale && <div className="draft-stale"><span>Your selection changed. Your edits are preserved.</span><button onClick={() => onChange({ ...state, body: null, draftedIds: state.included })}>Replace draft from selection</button></div>}
         <textarea aria-label="Email draft body" value={body} placeholder="Select vendor questions above to start a draft."
           onChange={(event) => onChange({ ...state, body: event.target.value, draftedIds: state.body === null ? state.included : state.draftedIds })} />
-        <footer><span role="status">{sendStatus || "Review before sending"}</span><button className="send-email" disabled={!body.trim()} onClick={sendEmail}>Send email</button></footer>
+        <footer><span role="status">{sendStatus || "Review before sending · Demo"}</span><button className="send-email" disabled={!body.trim() || !!sendStatus} onClick={sendEmail}>{sendStatus ? "Sent" : "Send email"}</button></footer>
       </section>
     </section>
   );

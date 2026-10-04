@@ -1,4 +1,5 @@
 const paths = {
+  pencil: <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" />,
   checked: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" />

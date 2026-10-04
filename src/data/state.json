@@ -30,7 +30,7 @@
           "to": "rfq@argus-defense.example",
           "date": "2026-05-14T09:48:00Z",
           "subject": "Re: RFQ - 10 parts due 5/20",
-          "body": "Hi Sales Team,\n\nHeader: payment terms NET 30. Quote valid 30 days. Contact Mike Henderson, mike@heritage-aero.example, (716) 555-0188.\nHeader note: prices firm through validity period and subject to prior sale.\n\n1. MS27039-1-08\n   NSN 5305-00-984-6210\n   desc: Screw, machine, pan head\n   mfr PN MS27039-1-08; mfr CAGE 1A2B3; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE 285\n   product note: FAT applies to the first line shown.\n      qty 100: USD 1.74 ea / 174.00 ext / 18d\n      qty 500: USD 1.62 ea / 810.00 ext / 27d\n\n2. NAS1149F0832P-ALT (ALT for NAS1149F0832P)\n   NSN 5310-00-167-0816\n   desc: Alternate washer, flat, aluminum\n   mfr PN NAS1149F0832P-ALT; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n   product note: Alternate offered for NAS1149F0832P.\n      qty 50: USD 2.21 ea / 110.50 ext / 24d\n      qty 200: USD 2.06 ea / 412.00 ext / 33d\n\n3. MS21042L3\n   NSN 5310-00-855-1257\n   desc: Nut, self-locking, hex\n   mfr PN MS21042L3; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 25: USD 2.68 ea / 67.00 ext / 30d\n      qty 100: USD 2.49 ea / 249.00 ext / 39d\n      qty 250: USD 2.30 ea / 575.00 ext / 48d\n      qty 500: USD 2.12 ea / 1060.00 ext / 57d\n\n4. M83248/1-006\n   NSN 5330-01-130-1932\n   desc: O-Ring, packing, preformed\n   mfr PN M83248/1-006; mfr CAGE 1A2B3; COO CA; hazmat yes\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 10: USD 3.15 ea / 31.50 ext / 36d\n      qty 50: USD 2.93 ea / 146.50 ext / 45d\n\n5. AN960-10\n   NO QUOTE / OMITTED FROM PRICE TABLE\n   desc: Washer, flat\n   note: No bid.\n\n6. MS35206-228\n   NSN 5305-00-984-4988\n   desc: Screw, machine, pan head, cad plated\n   mfr PN MS35206-228; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 75: USD 4.09 ea / 306.75 ext / 48d\n\n7. MS9556-04\n   NSN 4730-00-289-5226\n   desc: Plug, machine thread\n   mfr PN MS9556-04; mfr CAGE 1A2B3; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 12: USD 4.56 ea / 54.72 ext / 54d\n      qty 48: USD 4.24 ea / 203.52 ext / 63d\n      qty 96: USD 3.92 ea / 376.32 ext / 72d\n\n8. NAS1351-3H8\n   NSN 5305-00-728-7891\n   desc: Screw, socket head cap\n   mfr PN NAS1351-3H8; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 20: USD 5.03 ea / 100.60 ext / 60d\n      qty 60: USD 4.68 ea / 280.80 ext / 69d\n\n9. MS17985C411\n   NSN 5315-00-839-5824\n   desc: Pin, clevis, headed\n   mfr PN MS17985C411; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 30: USD 5.50 ea / 165.00 ext / 66d\n      qty 90: USD 5.11 ea / 459.90 ext / 75d\n\n10. AN3-12A\n   NSN 5306-00-826-2519\n   desc: Bolt, machine, hex head\n   mfr PN AN3-12A; mfr CAGE 1A2B3; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 25: USD 5.97 ea / 149.25 ext / 72d\n      qty 100: USD 5.55 ea / 555.00 ext / 81d\n\n11. MS24665-283 (extra stock)\n   NSN 5305-00-068-0501\n   desc: Extra screw, countersunk, unrequested\n   mfr PN MS24665-283; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging not included; shipping included; certs C of C; NRE none stated\n   product note: Extra stock item offered.\n      qty 30: USD 6.44 ea / 193.20 ext / 78d\n      qty 60: USD 5.99 ea / 359.40 ext / 87d\n\nBest,\nMike Henderson\nHeritage Aero Supply | cage 1A2B3",
+          "body": "Hi Sales Team,\n\nHeader: payment terms NET 30. Quote valid 30 days. Contact Mike Henderson, mike@heritage-aero.example, (716) 555-0188.\nHeader note: prices firm through validity period and subject to prior sale.\n\n1. MS27039-1-08\n   NSN 5305-00-984-6210\n   desc: Screw, machine, pan head\n   mfr PN MS27039-1-08; mfr CAGE 1 A 2 B 3; COO U.S.A.; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE 285\n   product note: FAT applies to the first line shown.\n      qty 100: USD 1,74 ea / 174,00 ext / 18d\n      qty 500: USD 1.62 ea / 810.00 ext / 27d\n\n2. NAS1149F0832P-ALT (ALT for NAS1149F0832P)\n   NSN 5310-00-167-0816\n   desc: Alternate washer, flat, aluminum\n   mfr PN NAS1149F0832P-ALT; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n   product note: Alternate offered for NAS1149F0832P.\n      qty 50: USD 2.21 ea / 110.50 ext / 24d\n      qty 200: USD 2.06 ea / 412.00 ext / 33d\n\n3. MS21042L3\n   NSN 5310-00-855-1257\n   desc: Nut, self-locking, hex\n   mfr PN MS21042L3; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 25: USD 2.68 ea / 67.00 ext / 30d\n      qty 100: USD 2.49 ea / 249.00 ext / 39d\n      qty 250: USD 2.30 ea / 575.00 ext / 48d\n      qty 500: USD 2.12 ea / 1060.00 ext / 57d\n\n4. M83248/1-006\n   NSN 5330-01-130-1932\n   desc: O-Ring, packing, preformed\n   mfr PN M83248/1-006; mfr CAGE 1A2B3; COO CA; hazmat yes\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 10: USD 3.15 ea / 31.50 ext / 36d\n      qty 50: USD 2.93 ea / 146.50 ext / 45d\n\n5. AN960-10\n   NO QUOTE / OMITTED FROM PRICE TABLE\n   desc: Washer, flat\n   note: No bid.\n\n6. MS35206-228\n   NSN 5305-00-984-4988\n   desc: Screw, machine, pan head, cad plated\n   mfr PN MS35206-228; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 75: USD 4.09 ea / 306.75 ext / 48d\n\n7. MS9556-04\n   NSN 4730-00-289-5226\n   desc: Plug, machine thread\n   mfr PN MS9556-04; mfr CAGE 1A2B3; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 12: USD 4.56 ea / 54.72 ext / 54d\n      qty 48: USD 4.24 ea / 203.52 ext / 63d\n      qty 96: USD 3.92 ea / 376.32 ext / 72d\n\n8. NAS1351-3H8\n   NSN 5305-00-728-7891\n   desc: Screw, socket head cap\n   mfr PN NAS1351-3H8; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; DFARS; NRE none stated\n      qty 20: USD 5.03 ea / 100.60 ext / 60d\n      qty 60: USD 4.68 ea / 280.80 ext / 69d\n\n9. MS17985C411\n   NSN 5315-00-839-5824\n   desc: Pin, clevis, headed\n   mfr PN MS17985C411; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 30: USD 5.50 ea / 165.00 ext / 66d\n      qty 90: USD 5.11 ea / 459.90 ext / 75d\n\n10. AN3-12A\n   NSN 5306-00-826-2519\n   desc: Bolt, machine, hex head\n   mfr PN AN3-12A; mfr CAGE 1A2B3; COO US; hazmat no\n   packaging included; shipping not included; certs C of C; NRE none stated\n      qty 25: USD 5.97 ea / 149.25 ext / 72d\n      qty 100: USD 5.55 ea / 555.00 ext / 81d\n\n11. MS24665-283 (extra stock)\n   NSN 5305-00-068-0501\n   desc: Extra screw, countersunk, unrequested\n   mfr PN MS24665-283; mfr CAGE 0K8G6; COO US; hazmat no\n   packaging not included; shipping included; certs C of C; NRE none stated\n   product note: Extra stock item offered.\n      qty 30: USD 6.44 ea / 193.20 ext / 78d\n      qty 60: USD 5.99 ea / 359.40 ext / 87d\n\nBest,\nMike Henderson\nHeritage Aero Supply | cage 1A2B3",
           "attachments": []
         }
       ],
@@ -43,9 +43,9 @@
           "packagingIncluded": true,
           "certifications": "C of C; DFARS",
           "nreCost": 285,
-          "coo": "US",
+          "coo": "",
           "hazmatItem": false,
-          "mfrCage": "1A2B3",
+          "mfrCage": "",
           "mfrPartNumber": "MS27039-1-08",
           "shippingIncluded": false,
           "additionalNotes": "FAT applies to the first line shown.",
@@ -60,7 +60,7 @@
               "price": null,
               "currency": "",
               "leadTime": null,
-              "additionalNotes": "Vendor left one commercial value unclear."
+              "additionalNotes": "Commercial values were not extracted from the vendor’s export."
             },
             {
               "id": "0ebe8eca-8bfc-4f40-9888-e09474d7af60",
@@ -1488,7 +1488,7 @@
               "isFat": false,
               "unitCost": 1.8,
               "variance": "",
-              "price": 180.0,
+              "price": 180,
               "currency": "USD",
               "leadTime": 14,
               "additionalNotes": ""
@@ -1500,7 +1500,7 @@
               "isFat": false,
               "unitCost": 1.72,
               "variance": "",
-              "price": 430.0,
+              "price": 430,
               "currency": "USD",
               "leadTime": 21,
               "additionalNotes": ""
@@ -1512,7 +1512,7 @@
               "isFat": false,
               "unitCost": 1.64,
               "variance": "",
-              "price": 820.0,
+              "price": 820,
               "currency": "USD",
               "leadTime": 28,
               "additionalNotes": ""
@@ -1553,7 +1553,7 @@
               "isFat": false,
               "unitCost": 2.17,
               "variance": "",
-              "price": 434.0,
+              "price": 434,
               "currency": "USD",
               "leadTime": 21,
               "additionalNotes": ""
@@ -1594,7 +1594,7 @@
               "isFat": false,
               "unitCost": 2.62,
               "variance": "",
-              "price": 262.0,
+              "price": 262,
               "currency": "USD",
               "leadTime": 21,
               "additionalNotes": ""
@@ -1606,7 +1606,7 @@
               "isFat": false,
               "unitCost": 2.54,
               "variance": "",
-              "price": 635.0,
+              "price": 635,
               "currency": "USD",
               "leadTime": 28,
               "additionalNotes": ""
@@ -1618,7 +1618,7 @@
               "isFat": false,
               "unitCost": 2.46,
               "variance": "",
-              "price": 1230.0,
+              "price": 1230,
               "currency": "USD",
               "leadTime": 35,
               "additionalNotes": ""
@@ -1688,7 +1688,7 @@
               "isFat": false,
               "unitCost": 3.6,
               "variance": "",
-              "price": 18.0,
+              "price": 18,
               "currency": "USD",
               "leadTime": 14,
               "additionalNotes": ""
@@ -1700,7 +1700,7 @@
               "isFat": false,
               "unitCost": 3.52,
               "variance": "",
-              "price": 88.0,
+              "price": 88,
               "currency": "USD",
               "leadTime": 21,
               "additionalNotes": ""
@@ -1712,7 +1712,7 @@
               "isFat": false,
               "unitCost": 3.44,
               "variance": "",
-              "price": 344.0,
+              "price": 344,
               "currency": "USD",
               "leadTime": 28,
               "additionalNotes": ""
@@ -1782,7 +1782,7 @@
               "isFat": false,
               "unitCost": 4.5,
               "variance": "",
-              "price": 54.0,
+              "price": 54,
               "currency": "USD",
               "leadTime": 14,
               "additionalNotes": ""
@@ -1847,7 +1847,7 @@
               "isFat": false,
               "unitCost": 4.95,
               "variance": "",
-              "price": 99.0,
+              "price": 99,
               "currency": "USD",
               "leadTime": 14,
               "additionalNotes": ""
@@ -1888,7 +1888,7 @@
               "isFat": false,
               "unitCost": 5.4,
               "variance": "",
-              "price": 81.0,
+              "price": 81,
               "currency": "USD",
               "leadTime": 14,
               "additionalNotes": ""
@@ -1953,7 +1953,7 @@
               "isFat": false,
               "unitCost": 5.77,
               "variance": "",
-              "price": 577.0,
+              "price": 577,
               "currency": "USD",
               "leadTime": 21,
               "additionalNotes": ""

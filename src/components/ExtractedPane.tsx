@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Product, Vendor } from "../lib/types";
 import type { ThreadModel, SourceLine, ReviewTarget } from "../lib/evidence";
 import type { Selection } from "../App";
@@ -8,8 +9,15 @@ import { IssueOverview } from "./IssueOverview";
 import { EvidenceMark } from "./EvidenceMark";
 import { FollowUpFlag } from "./FollowUpFlag";
 import type { FieldLink } from "../lib/fieldLinks";
+import { EditPencil, OverrideEditor } from "./OverrideEditor";
+import { overrideValue, type EditTarget, type OverrideValue } from "../lib/audit";
 
 interface Props {
+  editableTargets: EditTarget[];
+  editing: EditTarget | null;
+  onEdit: (target: EditTarget) => void;
+  onSaveEdit: (value: OverrideValue) => void;
+  onCancelEdit: () => void;
   fieldLinks: FieldLink[];
   vendor: Vendor;
   model: ThreadModel;
@@ -21,6 +29,7 @@ interface Props {
   onSelect: (productId: string, sourceId?: string, targetId?: string, linkId?: string) => void;
 }
 export function ExtractedPane({
+  editableTargets, editing, onEdit, onSaveEdit, onCancelEdit,
   fieldLinks,
   vendor,
   model,
@@ -32,14 +41,25 @@ export function ExtractedPane({
   onSelect,
 }: Props) {
   const requests = requestedParts(vendor);
+  function editable(target: EditTarget | undefined, content: ReactNode) {
+    if (!target) return content;
+    const active = editing?.id === target.id;
+    return <span className={`field-evidence-actions override-field ${active ? "editing-field" : ""}`}>
+      <span className="override-placeholder" aria-hidden={active || undefined} inert={active || undefined}>
+        <EditPencil label={target.label} onClick={() => onEdit(target)} />{content}
+      </span>
+      {active && <OverrideEditor key={target.id} target={target}
+        value={overrideValue(vendor, target)} onSave={onSaveEdit} onCancel={onCancelEdit} />}
+    </span>;
+  }
   function isSourceSelected(sourceId?: string) {
     return !!sourceId && !selection?.linkId && !selection?.targetId && selection?.sourceId === sourceId;
   }
   function plainValue(product: Product, field: string, quantity: number, value: string | number | null) {
     const link = fieldLinks.find(l => l.productId === product.id && l.field === field && l.quantity === quantity);
-    if (!link) return value;
-    return <button id={`field-link-${link.id}`} className={selection?.linkId === link.id ? "selected-linked-value" : ""}
-      onClick={() => onSelect(product.id, link.sourceId, undefined, link.id)}>{value}</button>;
+    const target = editableTargets.find(t => t.productId === product.id && t.field === field && t.quantity === quantity);
+    return editable(target, !link ? value : <button id={`field-link-${link.id}`} className={selection?.linkId === link.id ? "selected-linked-value" : ""}
+      onClick={() => onSelect(product.id, link.sourceId, undefined, link.id)}>{value}</button>);
   }
   const selectTarget = (target: ReviewTarget) =>
     onSelect(target.productId, target.source?.id, target.id);
@@ -52,7 +72,8 @@ export function ExtractedPane({
   function mark(target: ReviewTarget, value: string | number) {
     const canFollowUp = followUpIds.has(target.id);
     const added = addedFollowUpIds.has(target.id);
-    return (
+    return editable(target.category === "missing" ? target : editableTargets.find(t =>
+      t.productId === target.productId && t.field === target.field && t.quantity === target.quantity), (
       <span className="field-evidence-actions">
         {canFollowUp && (
           <FollowUpFlag label={target.label} added={added} onToggle={() => onToggleFollowUp(target.id)} />
@@ -66,7 +87,7 @@ export function ExtractedPane({
           {value}
         </EvidenceMark>
       </span>
-    );
+    ));
   }
   function field(
     product: Product | null,
@@ -102,13 +123,13 @@ export function ExtractedPane({
           {target ? (
             mark(target, text)
           ) : (
-            <button
+            editable(editableTargets.find(t => t.productId === product?.id && t.field === key && t.quantity === undefined), <button
               disabled={!source}
               onClick={() => onSelect(product?.id ?? "", link?.sourceId ?? source?.id, undefined, link?.id)}
               title={source ? "Show source text" : "No source text available"}
             >
               {text}
-            </button>
+            </button>)
           )}
         </dd>
       </div>

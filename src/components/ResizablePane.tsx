@@ -20,8 +20,8 @@ export function ResizablePane({ children, autoFit = false }: { children: ReactNo
       const question = row.querySelector<HTMLElement>(".follow-up-copy p")!;
       const titleWidth = Math.min(measure(title), parseFloat(getComputedStyle(title).maxWidth) || Infinity);
       const questionWidth = Math.min(measure(question), parseFloat(getComputedStyle(question).maxWidth) || Infinity);
-      // Row padding, checkbox, gaps, divider, number gutter and scrollbar allowance.
-      longest = Math.max(longest, Math.ceil(titleWidth + questionWidth + 132));
+      // Row padding, checkbox, gaps, divider and scrollbar allowance.
+      longest = Math.max(longest, Math.ceil(titleWidth + questionWidth + 106));
     }
     setContentWidth(longest);
   }, [autoFit, children]);

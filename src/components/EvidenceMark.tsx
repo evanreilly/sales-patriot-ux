@@ -81,9 +81,6 @@ export function EvidenceMark({
           onSelect(target);
         }}
       >
-        <span className="mark-key" aria-hidden="true">
-          {String(target.number).padStart(2, "0")}
-        </span>
         <span>{children}</span>
       </button>
       {position &&
@@ -95,7 +92,7 @@ export function EvidenceMark({
             style={{ ...style, ...position }}
           >
             <strong>
-              {String(target.number).padStart(2, "0")} · {target.label}
+              {target.label}
             </strong>
             <p>{target.explanation}</p>
             <small>

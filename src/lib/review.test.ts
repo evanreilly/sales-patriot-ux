@@ -9,9 +9,43 @@ import {
   validateProduct,
 } from "./review.ts";
 import type { Vendor } from "./types.ts";
+import { applyOverride, overrideValue, validateOverride, formatOverride } from "./audit.ts";
 const vendors: Vendor[] = JSON.parse(
   readFileSync(new URL("../data/state.json", import.meta.url), "utf8"),
 ).vendors;
+test("manual overrides validate typed values and preserve source emails", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const vendor = vendors[0];
+  const target = buildThreadModel(vendor).targets.find(t => t.field === "unitCost" && t.quantity === 100)!;
+  assert.equal(overrideValue(vendor, target), null);
+  const updated = applyOverride(vendor, target, validateOverride(target, "1.74"));
+  assert.equal(overrideValue(updated, target), 1.74);
+  assert.equal(overrideValue(vendor, target), null);
+  assert.equal(updated.emails, vendor.emails);
+  assert.ok(!buildThreadModel(updated).targets.some(t => t.id === target.id));
+  for (const value of ["-1", "NaN", "1,74", "Infinity"]) assert.throws(() => validateOverride(target, value));
+  const cleared = applyOverride(updated, target, validateOverride(target, ""));
+  assert.equal(overrideValue(cleared, target), null);
+  assert.ok(buildThreadModel(cleared).targets.some(t => t.id === target.id));
+  assert.equal(validateOverride({ ...target, field: "currency" }, "  "), "");
+  assert.equal(validateOverride({ ...target, field: "currency" }, "usd"), "USD");
+  assert.throws(() => validateOverride({ ...target, field: "currency" }, "dollar"));
+  assert.throws(() => validateOverride({ ...target, field: "leadTime" }, "1.5"));
+  assert.throws(() => validateOverride({ ...target, field: "id" }, "x"));
+});
+test("manual boolean overrides preserve false and text overrides trim input", () => {
+  const vendor = structuredClone(vendors[0]);
+  vendor.products[0].shippingIncluded = null;
+  const target = { id: "manual-test", productId: vendor.products[0].id, field: "shippingIncluded", label: "Shipping missing" };
+  const updated = applyOverride(vendor, target, validateOverride(target, "false"));
+  assert.equal(overrideValue(updated, target), false);
+  assert.equal(overrideValue(applyOverride(updated, target, validateOverride(target, "")), target), null);
+  assert.equal(formatOverride(false), "No");
+  assert.equal(formatOverride(0), "0");
+  assert.equal(formatOverride(null), "Empty");
+  assert.throws(() => validateOverride(target, "maybe"));
+  assert.equal(validateOverride({ ...target, field: "certifications" }, " C of C "), "C of C");
+});
 test("RFQ requests retain the original part numbers and quantity breaks", () => {
   for (const vendor of vendors) {
     const requests = requestedParts(vendor);
@@ -153,8 +187,8 @@ test("each missing extracted commercial field points to its own literal value", 
     targets.map((t) => [t.field, t.source!.text.slice(...t.range!)]),
   );
   assert.deepEqual(values, {
-    unitCost: "1.74",
-    price: "174.00",
+    unitCost: "1,74",
+    price: "174,00",
     currency: "USD",
     leadTime: "18",
   });
@@ -204,13 +238,32 @@ test("missing source evidence falls back to a labeled inferred location", async 
   const { buildThreadModel } = await import("./evidence.ts");
   const vendor = structuredClone(vendors[0]);
   vendor.products[0].coo = "";
-  vendor.emails[1].body = vendor.emails[1].body.replace("COO US;", "");
+  vendor.emails[1].body = vendor.emails[1].body.replace("COO U.S.A.;", "");
   const target = buildThreadModel(vendor).targets.find(
     (t) => t.field === "coo",
   )!;
   assert.equal(target.location, "inferred");
   assert.match(target.explanation, /best guess/);
   assert.ok(target.source?.text.includes(vendor.products[0].partNumber));
+});
+
+test("malformed seed values remain missing and point to literal evidence for manual correction", async () => {
+  const { buildThreadModel } = await import("./evidence.ts");
+  const { followUpItems } = await import("./followUp.ts");
+  const vendor = vendors[0];
+  const model = buildThreadModel(vendor);
+  for (const [field, sourceValue, corrected] of [
+    ["coo", "U.S.A.", "US"], ["mfrCage", "1 A 2 B 3", "1A2B3"],
+    ["unitCost", "1,74", 1.74], ["price", "174,00", 174],
+  ] as const) {
+    const target = model.targets.find(t => t.productId === vendor.products[0].id && t.field === field)!;
+    assert.equal(target.source!.text.slice(...target.range!), sourceValue);
+    assert.equal(followUpItems(vendor, model).find(item => item.target.id === target.id)!.destination, "extraction");
+    const updated = applyOverride(vendor, target, corrected);
+    assert.equal(overrideValue(updated, target), corrected);
+    assert.ok(!buildThreadModel(updated).targets.some(t => t.id === target.id));
+    assert.equal(updated.emails, vendor.emails);
+  }
 });
 
 test("vendor follow-up separates extraction gaps from unanswered vendor questions", async () => {
@@ -220,7 +273,7 @@ test("vendor follow-up separates extraction gaps from unanswered vendor question
   const items = followUpItems(vendor, buildThreadModel(vendor));
   const unitPrice = items.find((item) => item.target.field === "unitCost")!;
   assert.equal(unitPrice.destination, "extraction");
-  assert.match(unitPrice.reason, /1\.74/);
+  assert.match(unitPrice.reason, /1,74/);
   const missingQuantity = items.find((item) => item.target.quantity === 250 && item.target.category === "quantity")!;
   assert.equal(missingQuantity.destination, "vendor");
   const state = initialFollowUp(items);

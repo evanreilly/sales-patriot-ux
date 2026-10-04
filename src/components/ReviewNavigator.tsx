@@ -3,6 +3,8 @@ import type { ReviewTarget } from "../lib/evidence";
 import { issueStyle, issueColor, issueTextColor } from "../lib/issueClasses";
 import { Icon } from "./Icon";
 import { FollowUpFlag } from "./FollowUpFlag";
+import { EditPencil, OverrideEditor } from "./OverrideEditor";
+import type { OverrideValue } from "../lib/audit";
 
 export interface ReviewGuide {
   target: ReviewTarget;
@@ -12,6 +14,13 @@ export interface ReviewGuide {
   onPrevious: () => void;
   onNext: () => void;
   onClose: () => void;
+  edit?: {
+    active: boolean;
+    value: OverrideValue | null;
+    onStart: () => void;
+    onSave: (value: OverrideValue) => void;
+    onCancel: () => void;
+  };
   followUp?: {
     added: boolean;
     onToggle: () => void;
@@ -118,6 +127,11 @@ export function ReviewNavigator({ guide }: { guide: ReviewGuide }) {
         </button>
         <div className="review-action-stack">
           <div className="review-next-row">
+            {guide.edit && <div className="modal-override-slot">
+              {guide.edit.active ? <OverrideEditor key={guide.target.id} target={guide.target}
+                value={guide.edit.value} onSave={guide.edit.onSave} onCancel={guide.edit.onCancel} />
+                : <EditPencil label={guide.target.label} onClick={guide.edit.onStart} />}
+            </div>}
             {guide.followUp && <FollowUpFlag label={guide.target.label}
               added={guide.followUp.added} onToggle={guide.followUp.onToggle} />}
             <button
